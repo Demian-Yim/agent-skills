@@ -125,7 +125,10 @@ def pull(room: str, pageup: int = 10, pageup_delay: float = 0.8) -> str:
     wins = kakao_windows()
     cands = [w for w in wins if room == w[1]] or [w for w in wins if room in w[1]]
     if not cands:
-        raise SystemExit(f"'{room}' 창을 찾지 못했습니다. 카톡에서 그 채팅방을 열어 두세요. 열린 창: {[t for _, t in wins]}")
+        raise SystemExit(
+            f"'{room}' 창을 찾지 못했습니다. 열린 창: {[t for _, t in wins]}\n"
+            "→ 카카오톡 친구 탭 맨 위 '내 프로필'을 더블클릭해 '나와의 채팅'을 별도 창으로 연 뒤, 닫지 말고 그대로 두세요.\n"
+            "  (창 제목이 내 카톡 이름으로 표시됩니다. 제목이 다르면 --list 로 확인해 --room 에 그대로 넣으세요.)")
     hwnd, title = cands[0]
     child = find_child(hwnd, LIST_CLASS)
     if not child:

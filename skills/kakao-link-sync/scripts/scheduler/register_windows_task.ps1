@@ -1,4 +1,4 @@
-# register_windows_task.ps1 — Windows 작업 스케줄러에 '카톡 링크 자동 동기화' 등록 (매일 2회)
+﻿# register_windows_task.ps1 — Windows 작업 스케줄러에 '카톡 링크 자동 동기화' 등록 (매일 2회)
 # 관리자 PowerShell 에서:  powershell -ExecutionPolicy Bypass -File .\register_windows_task.ps1
 # 전제: 로그온 상태 + PC 카톡 로그인 + '나와의 채팅' 창이 열려 있어야 수집됨 (최소화 금지)
 $Dir   = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)   # 스크립트 상위 폴더

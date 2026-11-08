@@ -1,4 +1,4 @@
-# install_windows.ps1 — 데미안 자산 폴더(D:\00 Antigravity\00 Skills)와 Claude 스킬 폴더에 설치
+﻿# install_windows.ps1 — 데미안 자산 폴더(D:\00 Antigravity\00 Skills)와 Claude 스킬 폴더에 설치
 $Src = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $Targets = @("D:\00 Antigravity\00 Skills\kakao-link-sync", "$env:USERPROFILE\.claude\skills\kakao-link-sync")
 foreach ($t in $Targets) {
