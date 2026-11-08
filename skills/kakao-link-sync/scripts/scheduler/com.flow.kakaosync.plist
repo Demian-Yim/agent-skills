@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mac launchd: 매일 09:00 / 21:00 에 kakao_pull_mac.sh 실행
+     설치: cp com.flow.kakaosync.plist ~/Library/LaunchAgents/ ; 경로·이름 수정 후
+           launchctl load ~/Library/LaunchAgents/com.flow.kakaosync.plist
+     즉시 테스트: launchctl start com.flow.kakaosync -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.flow.kakaosync</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/bash</string>
+    <string>/Users/USERNAME/00 Claude/2026-11-07_카톡링크정리/kakao_pull_mac.sh</string>
+  </array>
+  <key>EnvironmentVariables</key><dict>
+    <key>KAKAO_ROOM</key><string>Demian 임정훈</string>
+    <key>KAKAO_SINCE</key><string>30d</string>
+  </dict>
+  <key>StartCalendarInterval</key><array>
+    <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Hour</key><integer>21</integer><key>Minute</key><integer>0</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/tmp/kakaosync.out</string>
+  <key>StandardErrorPath</key><string>/tmp/kakaosync.err</string>
+</dict></plist>
