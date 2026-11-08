@@ -56,7 +56,7 @@ def collect_messages(a):
 
     if a.source == 'windows':
         import kakao_pull_windows as W
-        text = W.pull(a.room, a.pageup)
+        text = W.pull(a.room or '', a.pageup, hwnd_override=a.hwnd, list_class=a.list_class)
         tmp = HERE / 'last_pull_windows.txt'
         tmp.write_text(text, encoding='utf-8')
         return KL.parse(tmp)
@@ -168,13 +168,15 @@ def main():
     ap.add_argument('--room', default=os.environ.get('KAKAO_ROOM', ''), help='나와의 채팅 창/방 이름 = 내 카톡 이름')
     ap.add_argument('--file', default=None)
     ap.add_argument('--pageup', type=int, default=10, help='windows: 과거 로드 PageUp 횟수')
+    ap.add_argument('--hwnd', type=int, default=0, help='windows: 읽을 창 핸들 직접 지정')
+    ap.add_argument('--list-class', default='EVA_VH_ListControl_Dblclk', help='windows: 대화 목록 컨트롤 클래스명')
     ap.add_argument('--since', default='30d', help='mac: kakaocli --since (예 7d, 24h)')
     ap.add_argument('--limit', type=int, default=2000, help='mac: 최대 메시지 수')
     ap.add_argument('--titles', action='store_true', help='페이지 제목(og:title) 수집')
     ap.add_argument('--notion-db', default=os.environ.get('NOTION_DB_ID', NOTION_DB_ID))
     ap.add_argument('--dry-run', action='store_true', help='Notion 에 쓰지 않고 CSV/MD 만 저장')
     a = ap.parse_args()
-    if a.source in ('windows', 'mac') and not a.room:
+    if a.source == 'mac' and not a.room or (a.source == 'windows' and not a.room and not a.hwnd):
         sys.exit('--room "내 카톡 이름" 또는 환경변수 KAKAO_ROOM 이 필요합니다')
 
     token = os.environ.get('NOTION_TOKEN', '')

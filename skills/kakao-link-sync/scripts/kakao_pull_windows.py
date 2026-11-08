@@ -33,15 +33,13 @@ user32 = ctypes.windll.user32
 
 
 def kakao_windows():
-    """카카오톡 프로세스가 가진, 보이는 최상위 창 목록 [(hwnd, title)]"""
+    """카카오톡 프로세스가 가진, 보이는 최상위 창 목록 [(hwnd, title)] — 제목이 비어 있어도 포함"""
     out = []
 
     def cb(hwnd, _):
         if not win32gui.IsWindowVisible(hwnd):
             return True
         title = win32gui.GetWindowText(hwnd)
-        if not title:
-            return True
         try:
             _, pid = win32process.GetWindowThreadProcessId(hwnd)
             h = win32api.OpenProcess(win32con.PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
@@ -53,6 +51,18 @@ def kakao_windows():
         return True
     win32gui.EnumWindows(cb, None)
     return out
+
+
+def child_classes(hwnd):
+    """창 안의 자식 컨트롤 클래스명 → 개수 (진단용)"""
+    counts = {}
+
+    def cb(h, _):
+        c = win32gui.GetClassName(h)
+        counts[c] = counts.get(c, 0) + 1
+        return True
+    win32gui.EnumChildWindows(hwnd, cb, None)
+    return counts
 
 
 def find_child(hwnd, cls):
@@ -121,18 +131,29 @@ def focus(hwnd, child):
     time.sleep(0.2)
 
 
-def pull(room: str, pageup: int = 10, pageup_delay: float = 0.8) -> str:
+def pull(room: str, pageup: int = 10, pageup_delay: float = 0.8, hwnd_override: int = 0, list_class: str = LIST_CLASS) -> str:
     wins = kakao_windows()
-    cands = [w for w in wins if room == w[1]] or [w for w in wins if room in w[1]]
+    if hwnd_override:
+        cands = [(h, t) for h, t in wins if h == hwnd_override] or [(hwnd_override, '(지정 창)')]
+    else:
+        # 1순위: 제목 일치, 2순위: 제목 포함, 3순위: 대화 목록 컨트롤을 가진 창(제목이 비어 있거나 메인 창에 붙은 경우)
+        cands = [w for w in wins if room and room == w[1]] or [w for w in wins if room and room in w[1]]
+        if not cands:
+            with_list = [w for w in wins if find_child(w[0], list_class)]
+            if len(with_list) == 1:
+                print(f"제목 '{room}' 창은 없지만 대화 목록 컨트롤을 가진 창 1개를 사용합니다: {with_list[0]}", file=sys.stderr)
+                cands = with_list
+            elif len(with_list) > 1:
+                raise SystemExit(f"대화 목록 컨트롤을 가진 창이 여러 개입니다. --hwnd 로 지정하세요: {with_list}")
     if not cands:
         raise SystemExit(
-            f"'{room}' 창을 찾지 못했습니다. 열린 창: {[t for _, t in wins]}\n"
-            "→ 카카오톡 친구 탭 맨 위 '내 프로필'을 더블클릭해 '나와의 채팅'을 별도 창으로 연 뒤, 닫지 말고 그대로 두세요.\n"
-            "  (창 제목이 내 카톡 이름으로 표시됩니다. 제목이 다르면 --list 로 확인해 --room 에 그대로 넣으세요.)")
+            f"'{room}' 창을 찾지 못했고, 대화 목록 컨트롤({list_class})을 가진 창도 없습니다. 열린 창: {wins}\n"
+            "→ 나와의 채팅을 연 상태에서  python scripts\\kakao_pull_windows.py --inspect <hwnd>  결과를 보내 주세요(컨트롤 구조 진단).")
     hwnd, title = cands[0]
-    child = find_child(hwnd, LIST_CLASS)
+    child = find_child(hwnd, list_class)
     if not child:
-        raise SystemExit(f"'{title}' 창에서 대화 목록 컨트롤({LIST_CLASS})을 찾지 못했습니다. 카톡 버전이 바뀐 듯합니다.")
+        raise SystemExit(f"'{title}'({hwnd}) 창에서 대화 목록 컨트롤({list_class})을 찾지 못했습니다.\n"
+                         f"→ --inspect {hwnd} 로 자식 컨트롤 목록을 확인해 --list-class 로 다른 클래스를 지정해 보세요.")
 
     backup = get_clip()
     try:
@@ -161,15 +182,25 @@ def main():
     ap.add_argument('--room', default=None, help="채팅방 창 제목 (나와의 채팅 = 내 카톡 이름)")
     ap.add_argument('--pageup', type=int, default=10, help='과거 로드를 위한 PageUp 횟수 (10회 ≈ 수백 건)')
     ap.add_argument('--out', default='pulled.txt')
-    ap.add_argument('--list', action='store_true', help='열린 카톡 창 제목만 출력')
+    ap.add_argument('--list', action='store_true', help='열린 카톡 창(제목·클래스·대화목록 컨트롤 유무) 출력')
+    ap.add_argument('--inspect', type=int, default=0, metavar='HWND', help='해당 창의 자식 컨트롤 클래스 목록 출력(진단)')
+    ap.add_argument('--hwnd', type=int, default=0, help='읽을 창 핸들을 직접 지정')
+    ap.add_argument('--list-class', default=LIST_CLASS, help=f'대화 목록 컨트롤 클래스명 (기본 {LIST_CLASS})')
     a = ap.parse_args()
     if a.list:
+        print('hwnd\t클래스\t대화목록컨트롤\t제목')
         for h, t in kakao_windows():
-            print(f'{h}\t{t}')
+            has = '있음' if find_child(h, a.list_class) else '-'
+            print(f'{h}\t{win32gui.GetClassName(h)}\t{has}\t{t or "(제목 없음)"}')
         return
-    if not a.room:
-        sys.exit('--room "내 카톡 이름" 을 지정하세요. (--list 로 확인)')
-    text = pull(a.room, a.pageup)
+    if a.inspect:
+        print(f'창 {a.inspect} "{win32gui.GetWindowText(a.inspect)}" 클래스 {win32gui.GetClassName(a.inspect)}')
+        for c, n in sorted(child_classes(a.inspect).items(), key=lambda x: -x[1]):
+            print(f'  {n:3d} x {c}')
+        return
+    if not a.room and not a.hwnd:
+        sys.exit('--room "내 카톡 이름" 또는 --hwnd 를 지정하세요. (--list 로 확인)')
+    text = pull(a.room or '', a.pageup, hwnd_override=a.hwnd, list_class=a.list_class)
     with open(a.out, 'w', encoding='utf-8') as f:
         f.write(text)
     print(f'{len(text.splitlines())}줄 수집 → {a.out}')
