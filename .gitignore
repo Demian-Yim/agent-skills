@@ -1,3 +1,11 @@
 .DS_Store
 .vercel
 .env*.local
+
+# ─── Claude Code 시크릿 유출 방지 (Apiiro 2026-11 대응) ───
+# 승인 명령이 평문 저장되어 비밀번호·토큰이 공개 저장소로 유출된 사례 대응
+.claude/settings.local.json
+.claude/*.local.json
+.claude/.credentials.json
+.cursor/*.local.json
+.gemini/*.local.json
